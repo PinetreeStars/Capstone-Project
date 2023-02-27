@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script type="text/javascript" src="TestingJS.js" defer></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js" defer></script>
+	<title id="title">Mobile Microgrid Login</title>
+</head>
+<body>
+	<button id="logout" onclick="logout()" style="display: none;">Log out</button>
+	<section id="loginFormSection">
+		<p>Please enter your login information</p>
+		<label for="username">Username: </label>
+		<input type="text" id="username" name="username"><br>
+		<label for="password">Password: </label>
+		<input type="password" id="password" name="password"><br>
+		<button onclick="loginVal()">Submit</button><br>
+	</section>
+	<section id="infoFormSection"></section>
+	<p id="failure"></p>
+	<section id="chartSection"></section>
+</body>
+</html>
