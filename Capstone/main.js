@@ -10,10 +10,6 @@ let cartChosen;
 let timeChosen;
 let myInterval;
 let stopLogin = false;
-let stopChoosing = false;
-let stopQuerying = false;
-//The stop* variables effectively lock the function from being called repeatedly
-//Unclear if they are necessary, but they make me feel better
 
 document.addEventListener("keypress", function(event) {
     if ((!stopLogin) && (event.key === "Enter")){
@@ -53,8 +49,8 @@ function loginVal () {
             '<section id="cartList">'+cartOptions.map(createCartBox).join('')+'</section>');
             document.getElementById("infoFormSection").insertAdjacentHTML('beforeend', 
             '<section id="timeList">'+timeOptions.map(createTimeBox).join('')+'</section>');
-            document.getElementById("infoFormSection").insertAdjacentHTML('beforeend', 
-            '<button onclick="userInput()">Get Data</button>');
+            //document.getElementById("infoFormSection").insertAdjacentHTML('beforeend', 
+            //'<button onclick="userInput()">Get Data</button>');
             document.getElementById("failure").innerHTML = "";
         }else{
             document.getElementById("failure").innerHTML = returned[1];
@@ -67,6 +63,7 @@ function loginVal () {
 }
 
 function logout() {
+    //Resets document to login page
     document.getElementById("logout").style.display = "none";
     document.getElementById("title").innerHTML = "Mobile Microgrid Login";
     document.getElementById("username").value = "";
@@ -101,10 +98,10 @@ function createCartBox(data) {
 }
 
 function createTimeBox(data) {
-    if (data[0] = "Specific Date"){
+    if (data[0] == "Specific Date"){
         return `
         <input type="radio" id="${data[0]}" name="timeOption" onchange="choose()">
-        <label for="${data[0]}">${data[0]}: <input type="text" id="${data[0]}:inp" placeholder="MMDDYYYY" onchange="choose()"></label><br>
+        <label for="${data[0]}">${data[0]}: <input type="text" id="${data[0]}:inp" placeholder="MMDDYYYY" oninput="choose()"></label><br>
         `;
     }else{
         return `
@@ -119,77 +116,91 @@ function capitalizeWord(word) {
 }
 
 function choose() {
-    if (stopChoosing){
-        return;
-    }
-    stopChoosing = true;
-
     document.getElementById("failure").innerHTML = "";
-    infoChosen = [];
-    cartChosen = [];
-    timeChosen = undefined;
+    infoTemp = [];
+    cartTemp = [];
+    timeTemp = undefined;
 
     infoOptions.forEach(function(opt) {
         if (document.getElementById(opt).checked){
-            infoChosen.push(opt);
+            infoTemp.push(opt);
         }
     });
-    if (infoChosen.length == 0){
+    if (infoTemp.length == 0){
         document.getElementById("failure").innerHTML = "No info selected";
-        stopChoosing = false;
-        return false;
+        if (myInterval != undefined){
+            clearInterval(myInterval);
+        }
+        return;
     }
 
     cartOptions.forEach(function(opt) {
         if (document.getElementById(opt[0]).checked){
-            cartChosen.push(opt);
+            cartTemp.push(opt);
         }
     });
-    if (cartChosen.length == 0){
+    if (cartTemp.length == 0){
         document.getElementById("failure").innerHTML = "No cart selected";
-        stopChoosing = false;
-        return false;
+        if (myInterval != undefined){
+            clearInterval(myInterval);
+        }
+        return;
     }
 
     const radios = document.getElementsByName("timeOption");
     for (let i = 0; i < radios.length; i ++){
         if (radios[i].checked){
-            timeChosen = radios[i];
+            timeTemp = radios[i];
         }
     }
-    if (timeChosen == undefined){
+    if (timeTemp == undefined){
         document.getElementById("failure").innerHTML = "No time period selected";
-        stopChoosing = false;
-        return false;
+        if (myInterval != undefined){
+            clearInterval(myInterval);
+        }
+        return;
     }
     timeOptions.forEach(function(time, index) {
-        if (time[0] == timeChosen.id){
-            timeChosen = time;
-            if (index == 0){
-                timeChosen[1] = document.getElementById(time[0]+":inp").value;
+        if (time[0] == timeTemp.id){
+            timeTemp = time;
+            if (timeTemp[0] == "Specific Date"){
+                timeTemp[1] = document.getElementById(time[0]+":inp").value;
             }
         }
     });
-    if (timeChosen[0] == "Specific Date"){
-        if (timeChosen[1].length != 8){
+    //Can't put this in the forEach because returning doesn't stop choose()
+    if (timeTemp[0] == "Specific Date"){
+        if (timeTemp[1].length != 8){
             document.getElementById("failure").innerHTML = "No valid date selected";
-            stopChoosing = false;
-            return false;
+            if (myInterval != undefined){
+                clearInterval(myInterval);
+            }
+            return;
         }else{
-            timeChosen[1] = `${timeChosen[1].substring(0,2)}/${timeChosen[1].substring(2,4)}/${timeChosen[1].substring(4,8)}`;
-            timeChosen[1] = Date.parse(timeChosen[1]);
-            if (timeChosen[1] == NaN){
+            timeTemp[1] = `${timeTemp[1].substring(0,2)}/${timeTemp[1].substring(2,4)}/${timeTemp[1].substring(4,8)}`;
+            timeTemp[1] = Date.parse(timeTemp[1]);
+            if (timeTemp[1] == NaN){
                 document.getElementById("failure").innerHTML = "No valid date selected";
-                stopChoosing = false;
-                return false;
+                if (myInterval != undefined){
+                    clearInterval(myInterval);
+                }
+                return;
             }
         }
     }
+    infoChosen = infoTemp;
+    cartChosen = cartTemp;
+    timeChosen = timeTemp;
     console.log(infoChosen, cartChosen, timeChosen);
-    stopChoosing = false;
-    return true;
+    queryData();
+    //Putting queryData() outside the conditional means any change will redraw charts
+    //The interval is only set for the first valid set of info
+    if (myInterval == undefined){
+        myInterval = setInterval(queryData, 10000);
+    }
+    //return true;
 }
-
+/*
 function userInput() {
     //clear myInterval before anything else, just in case
     //Only repercussion I see is the charts will 'freeze' on the previous request if a new invalid one is asked
@@ -204,12 +215,8 @@ function userInput() {
         myInterval = setInterval(queryData, 10000);
     }
 }
-
+*/
 function queryData() {
-    if (stopQuerying){
-        return;
-    }
-    stopQuerying = true;
     console.log("queryData() started");
 
     let toPHP = timeChosen.join(':') + "|";
@@ -261,11 +268,8 @@ function queryData() {
                     makeChart(stamps[stampIndex[i]], fullArr[i][c], infos[i], carts[c]);
                 }
             }
-            
-            stopQuerying = false;
         }else{
             document.getElementById("failure").innerHTML = fullArr[1];
-            stopQuerying = false;
         }
     }
     xhttp.open("GET", "QueryPHP.php?q=" + toPHP);
@@ -301,10 +305,8 @@ function makeChart(xVals, yVals, iLabel, cLabel){
             }]
         }, 
         options: {
-            plugins: {
-                legend: {
-                    display: false
-                }
+            legend: {
+                display: false
             }
         }
     })
