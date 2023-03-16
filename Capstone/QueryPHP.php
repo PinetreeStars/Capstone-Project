@@ -1,5 +1,6 @@
 <?php
     //To prevent SQL injection, create an array of all column names to verify the user input against
+    //Extra precautions will be taken to help prevent SQL-injection attacks
 
 	$conn = pg_connect("host=fleet-management-database.csg5vowywacr.us-east-2.rds.amazonaws.com port=5432 dbname=postgres user=postgres password=FleetRocks");
 	if (!$conn){
@@ -14,12 +15,12 @@
     $cartChosen = explode(':', $inp[1]);
     $infoChosen = explode(':', $inp[2]);
     $referenceTable = 'carts';
-    $infoTables = array("battery_measurements", "cart_location");
+    $infoTable = 'battery_measurements';
     //The large array of $cartChosen matches the $infoTables array
 
-    $results = pg_query($conn, 'SELECT * FROM '.$referenceTable);
+    $results = pg_query($conn, 'SELECT * FROM '.pg_escape_string($conn, $referenceTable));
     if (!$results){
-        echo "FALSE|Server error2";
+        echo "FALSE|Server error2 1";
         pg_close($conn);
         exit;
     }
@@ -29,18 +30,16 @@
     }
 
     $infoOptions = array();
-    for ($i = 0; $i < count($infoTables); $i ++){
-        $results = pg_query($conn, 'SELECT * FROM '.$infoTables[$i].' LIMIT 1');
-        if (!$results){
-            echo "FALSE|Server error2";
-            pg_close($conn);
-            exit;
-        }
-        for ($j = 0; $j < pg_num_fields($results); $j++){
-            array_push($infoOptions, pg_field_name($results, $j));
-        }
-        $infoOptions = array_filter($infoOptions, "removeUnneeded");
+    $results = pg_query($conn, 'SELECT * FROM '.pg_escape_string($conn, $infoTable).' LIMIT 1');
+    if (!$results){
+        echo "FALSE|Server error2 2";
+        pg_close($conn);
+        exit;
     }
+    for ($j = 0; $j < pg_num_fields($results); $j++){
+        array_push($infoOptions, pg_field_name($results, $j));
+    }
+    $infoOptions = array_filter($infoOptions, "removeUnneeded");
 
     $querySuffix;
     if ($timeChosen[0] == "Most Recent"){
@@ -58,27 +57,20 @@
         }
         $querySuffix .= ' ORDER BY timestamp DESC';
     }
+
     $stamps = array();
-    //$stamps will have as many arrays as $infoTables has tables
-    foreach ($infoTables as $table){
-    	$results = pg_query($conn, 'SELECT timestamp FROM '.$table.' WHERE 1 = 1'.$querySuffix);
-        if (!$results){
-            echo "FALSE|Server error2";
-            pg_close($conn);
-            exit;
-        }
-        $tempStamps = array();
-        while ($row = pg_fetch_row($results)){
-            //array_push($tempStamps, $row[0]);
-            array_push($tempStamps, date('Y-m-d H:i:s', ($row[0] / 1000)));
-            //WARNING
-            //Not error will occur if there is no timestamp, the date returned is the epoch
-            //Do not use the timestamp to check if data exists, use data to check if the timestamp exists
-        }
-        array_push($stamps, $tempStamps);
+    $results = pg_query($conn, 'SELECT timestamp FROM '.pg_escape_string($conn, $infoTable).' WHERE 1 = 1'.pg_escape_string($conn, $querySuffix));
+    if (!$results){
+        echo "FALSE|Server error2 3";
+        pg_close($conn);
+        exit;
     }
-    for ($i = 0; $i < count($infoTables); $i ++){
-    	$stamps[$i] = implode('~', $stamps[$i]);
+    while ($row = pg_fetch_row($results)){
+        //array_push($tempStamps, $row[0]);
+        array_push($stamps, date('Y-m-d H:i:s', ($row[0] / 1000)));
+        //WARNING
+        //No error will occur if there is no timestamp, the date returned is the epoch
+        //Do not use the timestamp to check if data exists, use data to check if the timestamp exists
     }
     
     $cartChosen = array_filter($cartOptions, "validCart");
@@ -96,24 +88,22 @@
     $infoChosen = array_combine($keys, $infoChosen);
     //This is dumb, but the keys roll over from all the filtering so this resets them
 
-    $tableIndex = 0;
     $ret = array();
-    $stampIndex = array();
     for ($info = 0; $info < count($infoChosen); $info ++){
-        $forParams = 'SELECT '.$infoChosen[$info].' FROM '.$infoTables[$tableIndex].' LIMIT 1';
+        $forParams = 'SELECT '.pg_escape_string($conn, $infoChosen[$info]).' FROM '.pg_escape_string($conn, $infoTable).' LIMIT 1';
         $results = pg_query($conn, $forParams);
         if (!$results){
-            //All info columns are in one array, this will increment the table
-            $forParams = 'SELECT '.$infoChosen[$info].' FROM '.$infoTables[++$tableIndex].' WHERE cartid = ';
+            echo "FALSE|Server error2 4";
+            pg_close($conn);
+            exit;
         }else{
-            $forParams = 'SELECT '.$infoChosen[$info].' FROM '.$infoTables[$tableIndex].' WHERE cartid = ';
+            $forParams = 'SELECT '.pg_escape_string($conn, $infoChosen[$info]).' FROM '.pg_escape_string($conn, $infoTable).' WHERE cartid = ';
         }
         $ret[$info] = array();
-        array_push($stampIndex, $tableIndex);
         foreach ($cartChosen as $cart){
-            $results = pg_query($conn, $forParams.$cart[0].$querySuffix);
+            $results = pg_query($conn, $forParams.pg_escape_string($conn, $cart[0]).pg_escape_string($conn, $querySuffix));
             if (!$results){
-                echo "FALSE|Server error2";
+                echo "FALSE|Server error2 5";
                 pg_close($conn);
                 exit;
             }
@@ -130,7 +120,8 @@
     for ($i = 0; $i < count($cartChosen); $i ++){
         $cartChosen[$i] = $cartChosen[$i][1];
     }
-    $ret = 'TRUE|'.implode(':', $ret).'|'.implode(':', $stampIndex).'|'.implode('^', $stamps).'|'.implode(':', $infoChosen).'|'.implode(':', $cartChosen);
+
+    $ret = 'TRUE|'.implode(':', $ret).'|'.implode('^', $stamps).'|'.implode(':', $infoChosen).'|'.implode(':', $cartChosen);
     echo $ret;
 	pg_close($conn);
 	exit;

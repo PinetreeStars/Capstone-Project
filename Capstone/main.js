@@ -70,6 +70,7 @@ function logout() {
     document.getElementById("password").value = "";
     document.getElementById("loginFormSection").style.display = "block";
     document.getElementById("infoFormSection").innerHTML = "";
+    document.getElementById("failure").innerHTML = "";
     document.getElementById("chartSection").style.display = "none";
     stopLogin = false;
     if (myInterval != undefined){
@@ -233,6 +234,7 @@ function queryData() {
     const xhttp = new XMLHttpRequest();
     xhttp.onload = function () {
         const full = this.responseText;
+        console.log(full);
         let fullArr = full.split('|');
         if (fullArr[0] == 'TRUE'){
             document.getElementById("chartSection").style.display = "block";
@@ -243,7 +245,6 @@ function queryData() {
             for (let i = 0; i < stamps.length; i ++){
                 stamps[i] = stamps[i].split('~');
             }
-            let stampIndex = fullArr.pop().split(':');
             fullArr = fullArr[0].split(':');
             for (let i = 0; i < fullArr.length; i ++){
                 if (fullArr[i].length > 0){
@@ -255,7 +256,7 @@ function queryData() {
                     }
                 }
             }
-            console.log(carts, infos, stamps, stampIndex, fullArr);
+            console.log(carts, infos, stamps, fullArr);
             //Everything appears to function correctly up to this point
 
             document.getElementById("chartSection").innerHTML = "";
@@ -265,7 +266,7 @@ function queryData() {
             for (let c = 0; c < carts.length; c ++){
                 for (let i = 0; i < infos.length; i ++){
                     //New tables will be drawn everytime because I don't want to mess with updating them
-                    makeChart(stamps[stampIndex[i]], fullArr[i][c], infos[i], carts[c]);
+                    makeChart(stamps, fullArr[i][c], infos[i], carts[c]);
                 }
             }
         }else{

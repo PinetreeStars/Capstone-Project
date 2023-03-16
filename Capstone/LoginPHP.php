@@ -19,8 +19,8 @@
 	//$tables must be hard-coded, everything else is dynamic
 	
 	$referenceTable = 'carts';
-	$infoTables = array("battery_measurements", "cart_location");
-	$results = pg_query($conn, 'SELECT * FROM '.$referenceTable);
+	$infoTable = 'battery_measurements';
+	$results = pg_query($conn, 'SELECT * FROM '.pg_escape_string($conn, $referenceTable));
 	if (!$results){
 		echo "FALSE|Server error";
 		pg_close($conn);
@@ -31,18 +31,16 @@
 		array_push($cartOptions, implode('^', $row));
 	}
 	$infoOptions = array();
-	for ($i = 0; $i < count($infoTables); $i ++){
-		$results = pg_query($conn, 'SELECT * FROM '.$infoTables[$i].' LIMIT 1');
-		if (!$results){
-			echo "FALSE|Server error";
-			pg_close($conn);
-			exit;
-		}
-		for ($j = 0; $j < pg_num_fields($results); $j++){
-			array_push($infoOptions, pg_field_name($results, $j));
-		}
-		$infoOptions = array_filter($infoOptions, "removeUnneeded");
+	$results = pg_query($conn, 'SELECT * FROM '.pg_escape_string($conn, $infoTable).' LIMIT 1');
+	if (!$results){
+		echo "FALSE|Server error";
+		pg_close($conn);
+		exit;
 	}
+	for ($i = 0; $i < pg_num_fields($results); $i++){
+		array_push($infoOptions, pg_field_name($results, $i));
+	}
+	$infoOptions = array_filter($infoOptions, "removeUnneeded");
 	echo "TRUE|".implode(':', $infoOptions)."|".implode(':', $cartOptions);
 	pg_close($conn);
 	exit;
