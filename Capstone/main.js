@@ -290,10 +290,10 @@ function queryData(inject = false) {
                     }
                     if((latData != null) && (lngData != null) && (altData != null)){
                         if (inject){
-                            document.querySelector("body").style.gridTemplateColumns = "60% 40%";
+                            //document.querySelector("body").style.gridTemplateColumns = "60% 40%";
                         }
                         mapChosen = true;
-                        addCartData(latData, lngData, altData, stamps, carts[c]);
+                        //addCartData(latData, lngData, altData, stamps, carts[c]);
                     }
                     //top holds the label for each cart-info pair
                     const top = infos[i].split('_').map(capitalizeWord).join(' ') + ' for ' + carts[c];
