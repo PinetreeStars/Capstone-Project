@@ -1,0 +1,13 @@
+* {
+	background-color: #1ab6ff;
+}
+
+body {
+	display: grid;
+	/* grid-template-columns: 60% 40%; */
+}
+
+#infoFormSection {
+	display: flex;
+	justify-content: space-between;
+}
